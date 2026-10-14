@@ -4,9 +4,9 @@ A short online study on how people make decisions during quality control inspect
 
 **[Start the study](YOUR-GITHUB-PAGES-LINK)**
 
-## About the researcher
+## About the researchers
 
-My name is Sam Herbert. I am the ESS, Inc. Health & Safety Intern and an industrial engineering student at the University of Missouri.
+We are Sam Herbert and Rogan Callahan, industrial engineering students at the University of Missouri. This study is our ISE 3810 course project.
 
 ## What you will do
 
