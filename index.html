@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QC Inspection Study</title>
+<style>
+  :root {
+    --bg: #eef1f4; --bg-deep: #e4e9ec; --panel: #ffffff;
+    --ink: #182530; --ink-soft: #5b6b74; --ink-faint: #8b98a1;
+    --line: #dbe1e5; --line-soft: #ebeef0;
+    --steel: #2f5573; --steel-deep: #203c53; --steel-tint: #eaf0f4;
+    --safety: #c97b00; --safety-tint: #fff4e2; --safety-line: #f0cf94;
+    --pass: #2b7a4b; --pass-tint: #eaf6ee;
+    --fail: #ad3a26; --fail-tint: #fbeae6;
+    --radius: 10px; --radius-sm: 6px;
+    --shadow: 0 1px 2px rgba(20,30,38,0.04), 0 10px 28px rgba(20,30,38,0.07);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+  .shell { max-width: 690px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 18px 20px 14px; }
+  .topbar .mark { width: 30px; height: 30px; border-radius: 8px; background: var(--steel); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .topbar .mark svg { width: 17px; height: 17px; }
+  .topbar .title { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .topbar .subtitle { font-size: 11px; color: var(--ink-faint); margin-top: 1px; }
+  #app { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 4px 20px 40px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 26px; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--steel); background: var(--steel-tint); border-radius: 20px; padding: 4px 10px; margin-bottom: 14px; }
+  h1 { font-size: 21px; line-height: 1.3; margin: 0 0 12px; font-weight: 700; }
+  h2 { font-size: 16px; margin: 0 0 12px; font-weight: 700; }
+  h3 { font-size: 13px; margin: 0 0 9px; font-weight: 700; letter-spacing: 0.01em; }
+  p { line-height: 1.6; color: var(--ink-soft); margin: 0 0 14px; font-size: 14px; }
+  .field { margin-bottom: 18px; }
+  label.field-label { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 7px; }
+  select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 14px; background: #fff; color: var(--ink); }
+  input.txt, textarea.txt { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 14px; font-family: inherit; background: #fff; color: var(--ink); }
+  textarea.txt { resize: vertical; line-height: 1.5; }
+  .opt { font-weight: 400; color: var(--ink-faint); }
+  .check-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .check-row input { margin-top: 3px; accent-color: var(--steel); }
+  .check-row span { font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
+  button { font-family: inherit; font-size: 14px; font-weight: 650; border-radius: var(--radius-sm); border: none; padding: 12px 22px; cursor: pointer; transition: background .15s ease, transform .05s ease; }
+  button:active { transform: translateY(1px); }
+  .btn-primary { background: var(--steel); color: #fff; }
+  .btn-primary:hover { background: var(--steel-deep); }
+  .btn-primary:disabled { background: #b7c1c8; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--steel); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--steel); background: var(--steel-tint); }
+  .actions { display: flex; justify-content: flex-end; margin-top: 20px; gap: 10px; }
+  .step-track { display: flex; gap: 4px; margin-bottom: 16px; }
+  .step-track .seg { height: 4px; flex: 1; border-radius: 2px; background: var(--line); overflow: hidden; }
+  .step-track .seg .fill { height: 100%; background: var(--steel); }
+  .part-frame { background: radial-gradient(circle at 50% 35%, #fbfcfd 0%, #f1f4f6 100%); border: 1px solid var(--line); border-radius: var(--radius); display: flex; justify-content: center; padding: 18px 0 6px; margin-bottom: 8px; }
+  .part-id { font-size: 11px; color: var(--ink-faint); text-align: center; margin: 0 0 14px; letter-spacing: .03em; }
+  .dropdown-toggle { width: 100%; text-align: left; background: #fff; border: 1px dashed #b7c4cc; border-radius: var(--radius-sm); padding: 11px 14px; font-size: 13px; font-weight: 650; color: var(--steel); cursor: pointer; margin-bottom: 12px; }
+  .dropdown-toggle:hover { background: var(--steel-tint); }
+  .dropdown-panel { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; background: #f8fafb; }
+  .evidence-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 7px; }
+  .evidence-row .val { font-weight: 650; }
+  .evidence-note { font-size: 13px; color: var(--ink-soft); border-top: 1px solid var(--line); padding-top: 9px; margin-top: 2px; }
+  .stage-block { border-top: 1px solid var(--line-soft); padding-top: 16px; margin-top: 4px; }
+  .choice-row { display: flex; gap: 12px; }
+  .choice-btn { flex: 1; padding: 15px 0; font-size: 14.5px; font-weight: 700; border-radius: var(--radius-sm); border: 1.5px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; }
+  .choice-btn.pass:hover { border-color: var(--pass); color: var(--pass); background: var(--pass-tint); }
+  .choice-btn.fail:hover { border-color: var(--fail); color: var(--fail); background: var(--fail-tint); }
+  .locked-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-soft); background: #f2f5f6; border: 1px solid var(--line); border-radius: 20px; padding: 5px 12px; margin-bottom: 14px; }
+  .locked-chip b { color: var(--ink); font-weight: 750; }
+  .ai-block { border: 1px solid var(--safety-line); background: linear-gradient(180deg, var(--safety-tint), #fffaf0); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+  .ai-verdict-line { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .ai-badge { font-size: 10px; font-weight: 800; letter-spacing: .06em; color: #fff; background: var(--safety); border-radius: 4px; padding: 3px 7px; flex-shrink: 0; }
+  .ai-verdict { font-size: 14.5px; font-weight: 750; }
+  .ai-verdict.yes { color: var(--pass); }
+  .ai-verdict.no { color: var(--fail); }
+  .ai-citation { font-size: 13px; color: var(--ink-soft); font-style: italic; line-height: 1.5; }
+  .scale-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .scale-btn { flex: 1; padding: 11px 0; border-radius: var(--radius-sm); border: 1.5px solid var(--line); background: #fff; font-size: 14px; cursor: pointer; color: var(--ink); font-weight: 600; }
+  .scale-btn:hover { border-color: var(--steel); }
+  .scale-btn.selected { border-color: var(--steel); background: var(--steel); color: #fff; }
+  .scale-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-faint); margin-bottom: 18px; }
+  .divider { border: none; border-top: 1px solid var(--line-soft); margin: 22px 0; }
+  table.admin-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 10px; }
+  table.admin-table th, table.admin-table td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; }
+  table.admin-table th { background: #f4f6f7; font-weight: 700; }
+  table.admin-table tbody tr:nth-child(even) { background: #fafbfc; }
+  .scroll-table { max-height: 300px; overflow-y: auto; border-radius: var(--radius-sm); }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 10px; margin: 16px 0; }
+  .stat-box { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; background: #fbfcfd; }
+  .stat-box .num { font-size: 20px; font-weight: 800; }
+  .stat-box .lbl { font-size: 10.5px; color: var(--ink-faint); margin-top: 2px; }
+  .cond-chip { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+  .cond-chip.none { background: #eef1f3; color: var(--ink-soft); }
+  .cond-chip.high { background: var(--pass-tint); color: var(--pass); }
+  .cond-chip.low { background: var(--fail-tint); color: var(--fail); }
+  .flag { color: var(--fail); font-weight: 700; }
+  .note-sm { font-size: 11.5px; color: var(--ink-soft); line-height: 1.55; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="mark"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2 L14.5 8.5 L21 9.3 L16 13.9 L17.4 20.5 L12 17 L6.6 20.5 L8 13.9 L3 9.3 L9.5 8.5 Z" stroke="white" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
+    <div>
+      <div class="title">QC Inspection Study</div>
+      <div class="subtitle">Industrial Engineering &middot; Human Factors Research</div>
+    </div>
+  </div>
+  <div id="app"></div>
+</div>
+
+<script>
+
+/* ================================================================
+   STANDALONE BUILD -- runs from any browser, saves to Google Sheets
+   Setup instructions: see Standalone_Setup_Guide.md
+   Until ENDPOINT_URL is filled in the tool runs in OFFLINE MODE:
+   everything works, and each finished session downloads itself as
+   a .json file so nothing is lost.
+   ================================================================ */
+const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbyD0EUwEBFovPpaODk7S3SK_67E89Z3YG5S_i8mWLxesTVDhGuehCvzCGmX3ns2t-Qe/exec"; // <-- paste your Apps Script /exec URL here
+
+// Shared secret. Must match STUDY_TOKEN in the Apps Script. Anyone who views
+// this page's source can read it, so it does not make the endpoint private --
+// it only stops casual junk submissions from someone who stumbles on the URL.
+// Change it to any random string you like, then change it in the script too.
+const STUDY_TOKEN = "ise3810-herbert-callahan";
+
+// Gate on the research dashboard. Participants can see the link at the bottom
+// of the welcome screen, so this keeps them from wandering into the data.
+const ADMIN_PASSPHRASE = "Kimmy";
+
+const OFFLINE = () => !ENDPOINT_URL;
+const LS_KEY = "qc_study_local_sessions";
+
+function localBuffer() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch (e) { return []; }
+}
+function pushLocal(rec) {
+  try { const all = localBuffer(); all.push(rec); localStorage.setItem(LS_KEY, JSON.stringify(all)); }
+  catch (e) {}
+}
+function downloadFallback(rec) {
+  try { dl(JSON.stringify(rec, null, 2), "qc_session_" + rec.participantId + ".json", "application/json"); }
+  catch (e) {}
+}
+
+/* --- READS use JSONP. ---------------------------------------------------
+   Apps Script cannot answer a CORS preflight, and a page opened straight
+   from a file:// path has a null origin, so plain fetch() reads fail. A
+   <script> tag is not subject to CORS, so JSONP works from anywhere,
+   including a local file. ---------------------------------------------- */
+let __jsonpSeq = 0;
+function jsonp(params, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const cb = "__qccb" + (++__jsonpSeq) + "_" + Date.now();
+    const s = document.createElement("script");
+    let done = false;
+    const cleanup = () => {
+      done = true;
+      try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+      if (s.parentNode) s.parentNode.removeChild(s);
+    };
+    window[cb] = (data) => { if (!done) { cleanup(); resolve(data); } };
+    s.onerror = () => { if (!done) { cleanup(); reject(new Error("JSONP load failed")); } };
+    const q = Object.keys(params).map((k) => encodeURIComponent(k) + "=" + encodeURIComponent(params[k])).join("&");
+    s.src = ENDPOINT_URL + "?" + q + "&callback=" + cb;
+    document.body.appendChild(s);
+    setTimeout(() => { if (!done) { cleanup(); reject(new Error("JSONP timed out")); } }, timeoutMs || 15000);
+  });
+}
+
+/* --- WRITES try a readable POST first, then fall back to no-cors. -------
+   no-cors still delivers the request to Apps Script (which saves it); we
+   just cannot read the reply, so we verify separately. ------------------ */
+async function postSession(rec) {
+  const body = JSON.stringify({ action: "save", token: STUDY_TOKEN, record: rec });
+  try {
+    const res = await fetch(ENDPOINT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body,
+    });
+    const out = await res.json();
+    if (out && out.status === "ok") return "confirmed";
+    throw new Error("endpoint returned an error");
+  } catch (e) {
+    await fetch(ENDPOINT_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body,
+    });
+    return "sent-unconfirmed";
+  }
+}
+
+async function postFeedback(fb) {
+  const body = JSON.stringify({ action: "feedback", token: STUDY_TOKEN, feedback: fb });
+  try {
+    const res = await fetch(ENDPOINT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body,
+    });
+    const out = await res.json();
+    if (out && out.status === "ok") return "confirmed";
+    throw new Error("endpoint returned an error");
+  } catch (e) {
+    await fetch(ENDPOINT_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body,
+    });
+    return "sent-unconfirmed";
+  }
+}
+
+async function fetchAllSessions() {
+  const out = await jsonp({ action: "list", token: STUDY_TOKEN });
+  return (out && out.records) || [];
+}
+async function fetchCounts() {
+  const out = await jsonp({ action: "counts", token: STUDY_TOKEN });
+  return (out && out.counts) || null;
+}
+async function pingEndpoint() {
+  const out = await jsonp({ action: "counts", token: STUDY_TOKEN }, 12000);
+  return out && out.status === "ok";
+}
+
+/* ================================================================
+   QC INSPECTION STUDY -- final instrument
+   ISE 3810 -- AI Reliability & Automation Bias
+   Herbert & Callahan
+
+   DESIGN RATIONALE (read before modifying)
+
+   Judge-advisor structure. Each scored trial captures the
+   participant's OWN call and confidence BEFORE any AI advice is
+   shown, then shows the advice, then captures a final call and
+   confidence. This is the standard advice-taking paradigm and it
+   is the only way to distinguish genuine independent agreement
+   from deference. Without a pre-advice judgment, "agreed with AI"
+   is uninterpretable. Both stages live on ONE card with progressive
+   reveal -- no page transitions -- so it reads as a single question.
+
+   No accept-shortcut button. Earlier drafts had a one-click
+   "Accept AI's Recommendation" button. It was removed: it makes
+   agreeing mechanically cheaper than disagreeing, so it measures
+   button affordance as much as trust and confounds the primary DV.
+   Final response uses identical Pass/Fail buttons regardless of
+   what the AI said. Equal effort both ways.
+
+   AI advice always shown (never optional). Optional consultation
+   produces missing reliance data for anyone who skips it, which is
+   fatal at n~15/group. Exposure is held constant; effort is instead
+   measured by the voluntary Inspection Data dropdown.
+
+   No trial-by-trial correctness feedback. Feedback would let
+   participants learn the reliability rate mid-session, converting
+   this into a learning study and contaminating the between-group
+   comparison. Trust trajectory is captured instead by three trust
+   probes (after trials 8, 16, and at the end).
+
+   Difficulty is computed, not hand-labeled: Easy (visual decides),
+   Medium / Hard (measurement decides; split by distance to the
+   tolerance edge), Ambiguous (displayed reading carries an explicit
+   uncertainty band that straddles the tolerance line, so the truth
+   is NOT recoverable from what the human is shown -- only the AI,
+   framed as holding a more precise internal reading, can resolve
+   it). Ambiguous trials are where reliance is a real dilemma
+   rather than laziness.
+
+   Error placement spans every difficulty tier in the low condition
+   so the reliability x difficulty interaction is testable.
+
+   TO SWAP IN REAL STIMULI: edit PART_LIBRARY. Keep groundTruth,
+   the measurement numbers, and (for ambiguous items) uncertainty
+   accurate; everything downstream computes itself.
+   ================================================================ */
+
+// ---------------- STIMULI (24 scored trials) ----------------
+// DISPOSITION RULE (stated to participants in the instructions):
+//   A part FAILS if ANY of these is true:
+//     (a) a clear visible defect is present,
+//     (b) the measurement falls outside the specified tolerance, or
+//     (c) the inspector's note documents a CONFIRMED defect on THIS unit.
+//   Notes about the lot, the vendor, or other parts are background only and
+//   do NOT by themselves fail this unit.
+//
+// noteType:
+//   "decisive"       direct physical evidence about this unit -> fails it
+//   "circumstantial" lot / vendor / other-unit history -> does NOT fail it
+//   "benign"         nothing of note
+//
+// decisiveEvidence names which source actually determines ground truth.
+// Tiers: Visual (6) / Measurement (6) / Judgment (8) / Ambiguous (4)
+const PART_LIBRARY = [
+  // ---- Tier 1: Visual (idx 0-5) ----
+  { id: "PT-01", groundTruth: "Pass", tier: "Visual", decisiveEvidence: "visual", crack: null, noteType: "benign",
+    measurement: { label: "Bore Diameter", value: 24.18, unit: "mm", specLow: 24.00, specHigh: 24.50 },
+    note: "Routine inspection; nothing flagged." },
+  { id: "PT-02", groundTruth: "Pass", tier: "Visual", decisiveEvidence: "visual", crack: null, noteType: "benign",
+    measurement: { label: "Wall Thickness", value: 3.04, unit: "mm", specLow: 2.90, specHigh: 3.20 },
+    note: "No irregularities observed." },
+  { id: "PT-03", groundTruth: "Pass", tier: "Visual", decisiveEvidence: "visual", crack: null, noteType: "benign",
+    measurement: { label: "Flange Gap", value: 1.09, unit: "mm", specLow: 0.90, specHigh: 1.30 },
+    note: "Consistent with batch average." },
+  { id: "PT-04", groundTruth: "Fail", tier: "Visual", decisiveEvidence: "visual", crack: { len: 50, op: 1.0 }, noteType: "decisive",
+    measurement: { label: "Bore Diameter", value: 24.74, unit: "mm", specLow: 24.00, specHigh: 24.50 },
+    note: "Crack on this unit confirmed under magnification." },
+  { id: "PT-05", groundTruth: "Fail", tier: "Visual", decisiveEvidence: "visual", crack: { len: 46, op: 1.0 }, noteType: "decisive",
+    measurement: { label: "Wall Thickness", value: 2.52, unit: "mm", specLow: 2.90, specHigh: 3.20 },
+    note: "Fracture line documented on this unit." },
+  { id: "PT-06", groundTruth: "Fail", tier: "Visual", decisiveEvidence: "visual", crack: { len: 48, op: 1.0 }, noteType: "decisive",
+    measurement: { label: "Flange Gap", value: 1.88, unit: "mm", specLow: 0.90, specHigh: 1.30 },
+    note: "Separation visible at two points on this unit." },
+
+  // ---- Tier 2: Measurement decides (idx 6-11) ----
+  { id: "PT-07", groundTruth: "Pass", tier: "Measurement", decisiveEvidence: "measurement", crack: { len: 9, op: 0.28 }, noteType: "circumstantial",
+    measurement: { label: "Flange Gap", value: 1.04, unit: "mm", specLow: 0.90, specHigh: 1.30 },
+    note: "Two other units from this lot failed downstream testing." },
+  { id: "PT-08", groundTruth: "Pass", tier: "Measurement", decisiveEvidence: "measurement", crack: { len: 10, op: 0.26 }, noteType: "circumstantial",
+    measurement: { label: "Shaft Runout", value: 0.04, unit: "mm", specLow: 0.00, specHigh: 0.08 },
+    note: "Vendor has reported intermittent quality issues this quarter." },
+  { id: "PT-09", groundTruth: "Pass", tier: "Measurement", decisiveEvidence: "measurement", crack: null, noteType: "benign",
+    measurement: { label: "Wall Thickness", value: 3.06, unit: "mm", specLow: 2.90, specHigh: 3.20 },
+    note: "No rework history on file." },
+  { id: "PT-10", groundTruth: "Fail", tier: "Measurement", decisiveEvidence: "measurement", crack: null, noteType: "benign",
+    measurement: { label: "Bore Diameter", value: 24.63, unit: "mm", specLow: 24.00, specHigh: 24.50 },
+    note: "No prior issues; consistent with normal production history." },
+  { id: "PT-11", groundTruth: "Fail", tier: "Measurement", decisiveEvidence: "measurement", crack: null, noteType: "benign",
+    measurement: { label: "Flange Gap", value: 1.44, unit: "mm", specLow: 0.90, specHigh: 1.30 },
+    note: "Cleared the prior inline inspection stage." },
+  { id: "PT-12", groundTruth: "Fail", tier: "Measurement", decisiveEvidence: "measurement", crack: null, noteType: "benign",
+    measurement: { label: "Shaft Runout", value: 0.13, unit: "mm", specLow: 0.00, specHigh: 0.08 },
+    note: "No customer complaints associated with this batch." },
+
+  // ---- Tier 3: Judgment -- dimensions in tolerance, the NOTE decides (idx 12-19) ----
+  // 12-15: decisive notes -> genuine Fails despite good dimensions
+  { id: "PT-13", groundTruth: "Fail", tier: "Judgment", decisiveEvidence: "note", crack: null, noteType: "decisive",
+    measurement: { label: "Bore Diameter", value: 24.30, unit: "mm", specLow: 24.00, specHigh: 24.50 },
+    note: "Dye-penetrant test on this unit confirmed a subsurface crack at the hub." },
+  { id: "PT-14", groundTruth: "Fail", tier: "Judgment", decisiveEvidence: "note", crack: null, noteType: "decisive",
+    measurement: { label: "Wall Thickness", value: 3.05, unit: "mm", specLow: 2.90, specHigh: 3.20 },
+    note: "This unit failed the hardness check at station 4; serial number matched." },
+  { id: "PT-15", groundTruth: "Fail", tier: "Judgment", decisiveEvidence: "note", crack: null, noteType: "decisive",
+    measurement: { label: "Flange Gap", value: 1.12, unit: "mm", specLow: 0.90, specHigh: 1.30 },
+    note: "Impact damage documented on this unit after a drop during handling." },
+  { id: "PT-16", groundTruth: "Fail", tier: "Judgment", decisiveEvidence: "note", crack: null, noteType: "decisive",
+    measurement: { label: "Shaft Runout", value: 0.05, unit: "mm", specLow: 0.00, specHigh: 0.08 },
+    note: "Ultrasonic scan of this unit identified an internal void exceeding the limit." },
+  // 16-19: circumstantial notes -> genuine Passes despite alarming-sounding history
+  { id: "PT-17", groundTruth: "Pass", tier: "Judgment", decisiveEvidence: "note", crack: { len: 9, op: 0.26 }, noteType: "circumstantial",
+    measurement: { label: "Bore Diameter", value: 24.32, unit: "mm", specLow: 24.00, specHigh: 24.50 },
+    note: "Two other units from this lot failed downstream testing." },
+  { id: "PT-18", groundTruth: "Pass", tier: "Judgment", decisiveEvidence: "note", crack: { len: 10, op: 0.25 }, noteType: "circumstantial",
+    measurement: { label: "Wall Thickness", value: 3.08, unit: "mm", specLow: 2.90, specHigh: 3.20 },
+    note: "Vendor has reported intermittent quality issues this quarter." },
+  { id: "PT-19", groundTruth: "Pass", tier: "Judgment", decisiveEvidence: "note", crack: null, noteType: "circumstantial",
+    measurement: { label: "Flange Gap", value: 1.15, unit: "mm", specLow: 0.90, specHigh: 1.30 },
+    note: "Similar parts were flagged for review in last quarter's audit." },
+  { id: "PT-20", groundTruth: "Pass", tier: "Judgment", decisiveEvidence: "note", crack: { len: 8, op: 0.28 }, noteType: "circumstantial",
+    measurement: { label: "Shaft Runout", value: 0.05, unit: "mm", specLow: 0.00, specHigh: 0.08 },
+    note: "This lot was produced during a shift with elevated scrap rates." },
+
+  // ---- Tier 4: Ambiguous -- uncertainty band straddles the limit (idx 20-23) ----
+  { id: "PT-21", groundTruth: "Pass", tier: "Ambiguous", decisiveEvidence: "internal", ambiguous: true, crack: null, noteType: "benign",
+    measurement: { label: "Bore Diameter", value: 24.47, uncertainty: 0.06, unit: "mm", specLow: 24.00, specHigh: 24.50 },
+    note: "No additional inspection history available for this unit." },
+  { id: "PT-22", groundTruth: "Fail", tier: "Ambiguous", decisiveEvidence: "internal", ambiguous: true, crack: null, noteType: "benign",
+    measurement: { label: "Bore Diameter", value: 24.53, uncertainty: 0.06, unit: "mm", specLow: 24.00, specHigh: 24.50 },
+    note: "No additional inspection history available for this unit." },
+  { id: "PT-23", groundTruth: "Pass", tier: "Ambiguous", decisiveEvidence: "internal", ambiguous: true, crack: null, noteType: "benign",
+    measurement: { label: "Wall Thickness", value: 2.93, uncertainty: 0.05, unit: "mm", specLow: 2.90, specHigh: 3.20 },
+    note: "Standard batch; no flags on record." },
+  { id: "PT-24", groundTruth: "Fail", tier: "Ambiguous", decisiveEvidence: "internal", ambiguous: true, crack: null, noteType: "benign",
+    measurement: { label: "Wall Thickness", value: 2.88, uncertainty: 0.05, unit: "mm", specLow: 2.90, specHigh: 3.20 },
+    note: "Standard batch; no flags on record." },
+];
+
+const PRACTICE_LIBRARY = [
+  { id: "PR-A", groundTruth: "Pass", tier: "Visual", decisiveEvidence: "visual", crack: null, noteType: "benign",
+    measurement: { label: "Bore Diameter", value: 24.15, unit: "mm", specLow: 24.00, specHigh: 24.50 },
+    note: "No issues identified." },
+  { id: "PR-B", groundTruth: "Fail", tier: "Visual", decisiveEvidence: "visual", crack: { len: 48, op: 1.0 }, noteType: "decisive",
+    measurement: { label: "Wall Thickness", value: 2.41, unit: "mm", specLow: 2.90, specHigh: 3.20 },
+    note: "Defect on this unit confirmed." },
+  { id: "PR-C", groundTruth: "Pass", tier: "Judgment", decisiveEvidence: "note", crack: null, noteType: "circumstantial",
+    measurement: { label: "Flange Gap", value: 1.05, unit: "mm", specLow: 0.90, specHigh: 1.30 },
+    note: "Similar parts from this vendor were flagged last quarter." },
+];
+
+// Scripted incorrect AI verdicts, by condition. Fixed (not random per
+// participant) so achieved reliability is identical for everyone in a group.
+// High: 5/24 wrong = 79.2% correct.  Low: 11/24 wrong = 54.2% correct.
+// Errors span every tier AND both directions of note-misuse, so "the AI cited
+// the inspector's note" is never a reliable tell that the AI is wrong.
+//    6  Measurement Pass                      -> AI says Fail
+//    9  Measurement Fail                      -> AI says Pass
+//   13  Judgment Fail (decisive note)         -> AI dismisses it, says Pass
+//   17  Judgment Pass (circumstantial note)   -> AI over-trusts it, says Fail
+//   21  Ambiguous
+const WRONG_INDICES = {
+  none: [],
+  high: [6, 9, 13, 17, 21],
+  low:  [2, 5, 7, 8, 10, 12, 15, 16, 19, 20, 23],
+};
+const CONDITIONS = ["none", "high", "low"];
+const CONDITION_LABEL = { none: "No AI assistance", high: "High-reliability AI", low: "Low-reliability AI" };
+const TRUST_PROBE_AFTER = [8, 16]; // trial numbers after which a trust probe appears
+
+// ---------------- COMPUTED HELPERS ----------------
+function inTolerance(m) { return m.value >= m.specLow && m.value <= m.specHigh; }
+function measurementDisplay(m) {
+  return m.uncertainty
+    ? `${m.value.toFixed(2)} \u00b1 ${m.uncertainty.toFixed(2)} ${m.unit}`
+    : `${m.value.toFixed(2)} ${m.unit}`;
+}
+function specDisplay(m) { return `${m.specLow.toFixed(2)}\u2013${m.specHigh.toFixed(2)} ${m.unit}`; }
+function marginRatio(m) {
+  const half = (m.specHigh - m.specLow) / 2;
+  return Math.min(Math.abs(m.value - m.specLow), Math.abs(m.value - m.specHigh)) / half;
+}
+function difficultyOf(part) { return part.tier; }
+function visualFactText(part) {
+  if (!part.crack) return "No visible surface defects.";
+  if (part.crack.op >= 0.9) return "Visible crack observed on the surface.";
+  return "A faint surface mark is visible; inconclusive on its own.";
+}
+
+// ---------------- AI ADVICE ----------------
+// Every fact the AI states is TRUE. When the AI is scripted wrong it does not
+// lie -- it reasons from a real but non-determinative signal (the inspector
+// note) and reaches a conclusion that doesn't follow. On ambiguous trials it
+// appeals to an internal reading the human cannot check either way.
+function aiAdvice(part, isWrong) {
+  const flip = part.groundTruth === "Pass" ? "Fail" : "Pass";
+  const verdict = isWrong ? flip : part.groundTruth;
+  const claim = verdict === "Pass"
+    ? "I recommend this part be accepted."
+    : "I recommend this part be rejected.";
+  const m = part.measurement;
+  const inTol = m.uncertainty ? null : inTolerance(m);
+  const NOTE = "the inspector's note";
+
+  // Ambiguous: the displayed reading cannot resolve the call either way, so the
+  // AI appeals to an internal reading the operator has no way to check.
+  if (part.ambiguous) {
+    return { verdict, basis: "internal-reading",
+      citation: claim + " The reported " + m.label.toLowerCase() + " of " + measurementDisplay(m) +
+        " carries an uncertainty band that overlaps the specified limit of " + specDisplay(m) +
+        ", so the displayed value alone does not resolve it. Our internal reading resolves finer than the displayed range and falls " +
+        (verdict === "Pass" ? "inside" : "outside") + " the limit." };
+  }
+
+  // Visual-decisive.
+  if (part.decisiveEvidence === "visual") {
+    if (!isWrong) return { verdict, basis: "visual", citation: claim + " " + visualFactText(part) };
+    return { verdict, basis: "visual",
+      citation: verdict === "Pass"
+        ? claim + " The surface irregularity is cosmetic in character and the unit remains serviceable."
+        : claim + " Surface review indicates an irregularity consistent with a rejectable condition." };
+  }
+
+  // Measurement-decisive.
+  if (part.decisiveEvidence === "measurement") {
+    if (!isWrong) {
+      return { verdict, basis: "measurement",
+        citation: claim + " The " + m.label.toLowerCase() + " measures " + measurementDisplay(m) +
+          " against a specified tolerance of " + specDisplay(m) + ", placing it " +
+          (inTol ? "inside" : "outside") + " the limit. That reading governs conformance here." };
+    }
+    if (verdict === "Fail") {
+      return { verdict, basis: "note",
+        citation: claim + " " + NOTE + ' records: "' + part.note +
+          '" Weighed against a reading that sits near the edge of its band, that history is the stronger signal for this unit.' };
+    }
+    return { verdict, basis: "measurement",
+      citation: claim + " The " + m.label.toLowerCase() + " reading of " + measurementDisplay(m) +
+        " is a marginal excursion consistent with normal process variation, and the inspection record shows no confirmed defect on this unit." };
+  }
+
+  // Judgment tier: dimensions are in tolerance and the NOTE decides.
+  if (part.noteType === "decisive") {
+    if (!isWrong) {
+      return { verdict, basis: "note",
+        citation: claim + " The " + m.label.toLowerCase() + " of " + measurementDisplay(m) +
+          " is within the specified tolerance of " + specDisplay(m) + ", but " + NOTE +
+          ' records a confirmed condition on this specific unit: "' + part.note +
+          '" A documented defect on the unit itself governs the disposition regardless of dimensional conformance.' };
+    }
+    // Wrong: dismisses genuine unit-specific evidence in favour of the numbers.
+    return { verdict, basis: "measurement",
+      citation: claim + " The " + m.label.toLowerCase() + " of " + measurementDisplay(m) +
+        " is within the specified tolerance of " + specDisplay(m) +
+        ", and dimensional conformance is the governing acceptance criterion. The accompanying note is supplementary and does not by itself establish non-conformance." };
+  }
+
+  // Circumstantial note.
+  if (!isWrong) {
+    return { verdict, basis: "note",
+      citation: claim + " The " + m.label.toLowerCase() + " of " + measurementDisplay(m) +
+        " is within the specified tolerance of " + specDisplay(m) + ". " +
+        NOTE.charAt(0).toUpperCase() + NOTE.slice(1) + ' ("' + part.note +
+        '") refers to other units and to lot history rather than to a confirmed condition on this unit, so it does not establish non-conformance here.' };
+  }
+  // Wrong: treats lot/vendor history as though it were evidence about this unit.
+  return { verdict, basis: "note",
+    citation: claim + " " + NOTE + ' records: "' + part.note +
+      '" Given that documented history, the risk profile for this unit is elevated and rejection is the conservative disposition.' };
+}
+
+// ---------------- STATE ----------------
+const freshState = () => ({
+  screen: "welcome", preview: false,
+  population: null, participantId: null, condition: null,
+  trialOrder: [], trialIdx: 0, practiceIdx: 0,
+  results: [], trustProbes: [],
+  pendingResponse: null, postAnswers: {}, intakeAnswers: null,
+  trialStartTime: null,
+});
+let state = freshState();
+
+// Admin-only preview: jump straight to any participant screen. Nothing is saved
+// (saveResponse and the feedback post are both blocked while state.preview is
+// true), and leaving preview wipes the state so no preview answers can leak
+// into a real participant's session on the same browser.
+function startPreview(screen, condition) {
+  state = freshState();
+  Object.assign(state, {
+    screen, preview: true,
+    population: "student", participantId: "PREVIEW", condition,
+    trialOrder: shuffledIndices(PART_LIBRARY.length),
+    intakeAnswers: {},
+  });
+  if (screen === "trustprobe") state.trialIdx = TRUST_PROBE_AFTER[0] || 8;
+  render();
+}
+function exitPreview() {
+  state = freshState();
+  state.screen = "admin";
+  render();
+}
+function addPreviewBanner() {
+  const b = document.createElement("div");
+  b.id = "pvBanner";
+  b.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:50;background:#182530;color:#fff;font-size:12.5px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;";
+  const t = document.createElement("span");
+  t.innerHTML = "<b>PREVIEW MODE</b> &mdash; nothing here is saved.";
+  const x = document.createElement("button");
+  x.textContent = "Exit to dashboard";
+  x.style.cssText = "background:#fff;color:#182530;border:0;border-radius:4px;padding:6px 12px;font-weight:700;font-size:12px;cursor:pointer;";
+  x.onclick = exitPreview;
+  b.appendChild(t); b.appendChild(x);
+  document.body.appendChild(b);
+}
+
+function uid() { return "P-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7); }
+function shuffledIndices(n) {
+  const a = Array.from({ length: n }, (_, i) => i);
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+async function assignCondition(population) {
+  let counts = null;
+  if (!OFFLINE()) { try { counts = await fetchCounts(); } catch (e) { counts = null; } }
+  if (!counts) {
+    counts = { student: { none: 0, high: 0, low: 0 }, professional: { none: 0, high: 0, low: 0 } };
+    localBuffer().forEach((r) => {
+      if (counts[r.population] && counts[r.population][r.condition] !== undefined) counts[r.population][r.condition] += 1;
+    });
+  }
+  const b = counts[population] || { none: 0, high: 0, low: 0 };
+  const min = Math.min(b.none, b.high, b.low);
+  const tied = CONDITIONS.filter((c) => b[c] === min);
+  return tied[Math.floor(Math.random() * tied.length)];
+}
+
+// ---------------- PART RENDER ----------------
+function drawPart(part) {
+  const crack = part.crack ? `
+    <path d="M 70 38 L ${70 + part.crack.len * 0.42} ${38 + part.crack.len * 0.48} L ${58 + part.crack.len * 0.5} ${44 + part.crack.len * 0.66}"
+      stroke="#7a2f1f" stroke-width="2.6" fill="none" opacity="${part.crack.op}" stroke-linecap="round"/>
+    <path d="M 70 38 L ${70 + part.crack.len * 0.42} ${38 + part.crack.len * 0.48} L ${58 + part.crack.len * 0.5} ${44 + part.crack.len * 0.66}"
+      stroke="#c96a4a" stroke-width="0.8" fill="none" opacity="${part.crack.op * 0.7}" stroke-linecap="round"/>` : "";
+  return `
+  <svg width="172" height="172" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="mg" cx="38%" cy="32%" r="75%"><stop offset="0%" stop-color="#f3f6f8"/><stop offset="55%" stop-color="#dbe3e8"/><stop offset="100%" stop-color="#b9c5cc"/></radialGradient>
+      <radialGradient id="hg" cx="40%" cy="35%" r="70%"><stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#e3e9ec"/></radialGradient>
+      <filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#1c2b33" flood-opacity="0.18"/></filter>
+    </defs>
+    <ellipse cx="70" cy="122" rx="42" ry="6" fill="#1c2b33" opacity="0.08"/>
+    <circle cx="70" cy="70" r="52" fill="url(#mg)" stroke="#8fa3ad" stroke-width="1.5" filter="url(#sh)"/>
+    <circle cx="70" cy="70" r="52" fill="none" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    ${Array.from({ length: 8 }).map((_, i) => {
+      const a = (i / 8) * Math.PI * 2;
+      return `<circle cx="${70 + Math.cos(a) * 40}" cy="${70 + Math.sin(a) * 40}" r="3.2" fill="#c3ced4" stroke="#8fa3ad" stroke-width="0.8"/>`;
+    }).join("")}
+    <circle cx="70" cy="70" r="19" fill="url(#hg)" stroke="#8fa3ad" stroke-width="1.5"/>
+    <circle cx="70" cy="70" r="6" fill="#c3ced4" stroke="#8fa3ad" stroke-width="1"/>
+    ${crack}
+  </svg>`;
+}
+
+// ---------------- RENDER SCAFFOLD ----------------
+const app = document.getElementById("app");
+function render() {
+  const old = document.getElementById("pvBanner");
+  if (old) old.remove();
+  app.style.paddingBottom = state.preview ? "64px" : "";
+  renderScreen();
+  if (state.preview) addPreviewBanner();
+}
+function renderScreen() {
+  app.innerHTML = "";
+  const s = state.screen;
+  if (s === "welcome") return renderWelcome();
+  if (s === "intake") return renderIntake();
+  if (s === "instructions") return renderInstructions();
+  if (s === "practice" || s === "trial") return renderTrial(s === "practice");
+  if (s === "trustprobe") return renderTrustProbe();
+  if (s === "post") return renderPost();
+  if (s === "done") return renderDone();
+  if (s === "admin") return renderAdmin();
+}
+function card(html) {
+  const d = document.createElement("div");
+  d.className = "card"; d.innerHTML = html; app.appendChild(d); return d;
+}
+function stepTrack(done, total) {
+  return `<div class="step-track">${Array.from({ length: total }).map((_, i) =>
+    `<div class="seg"><div class="fill" style="width:${i < done ? 100 : 0}%"></div></div>`).join("")}</div>`;
+}
+function scaleRowHTML(group, min, max, lo, hi) {
+  let b = "";
+  for (let i = min; i <= max; i++) b += `<button class="scale-btn" data-v="${i}">${i}</button>`;
+  return `<div class="scale-row" data-group="${group}">${b}</div><div class="scale-labels"><span>${lo}</span><span>${hi}</span></div>`;
+}
+function evidencePanelHTML(part) {
+  return `
+    <div class="evidence-row"><span>Visual Inspection</span></div>
+    <div class="evidence-note" style="margin-bottom:10px;">${visualFactText(part)}</div>
+    <div class="evidence-row"><span>${part.measurement.label}</span><span class="val mono">${measurementDisplay(part.measurement)}</span></div>
+    <div class="evidence-row"><span>Specified tolerance</span><span class="val mono">${specDisplay(part.measurement)}</span></div>
+    <div class="evidence-note">Inspector note: ${part.note}</div>`;
+}
+
+// ---------------- WELCOME ----------------
+function renderWelcome() {
+  const el = card(`
+    <span class="eyebrow">Part Inspection Study</span>
+    <h1>Quality Control Decision Task</h1>
+    <p>You will review a series of manufactured parts and judge whether each should <strong>pass</strong> or <strong>fail</strong> inspection. Some are clear-cut. Others are genuinely difficult, the same as real quality control work.</p>
+    <p>The task takes about 20 minutes. Responses are anonymous and used for a university research project.</p>
+    <div class="field">
+      <label class="field-label">Which best describes you?</label>
+      <select id="pop">
+        <option value="">Select one\u2026</option>
+        <option value="student">College student</option>
+        <option value="professional">Working professional</option>
+      </select>
+    </div>
+    <div class="check-row"><input type="checkbox" id="c-age"/><span>I am 18 years of age or older.</span></div>
+    <div class="check-row"><input type="checkbox" id="c-agree"/><span>I agree to take part voluntarily. I understand my responses are anonymous, I may stop at any time, and results will be used for an academic research project.</span></div>
+    <div class="actions"><button class="btn-primary" id="go" disabled>Begin</button></div>
+    <div style="text-align:center;margin-top:20px;"><a href="#" id="adm" style="font-size:11px;color:var(--ink-faint);text-decoration:none;">Research team dashboard</a></div>
+  `);
+  el.querySelector("#adm").onclick = (e) => {
+    e.preventDefault();
+    const entered = window.prompt("Research team passphrase:");
+    if (entered === null) return;
+    // Ignores case and stray spaces (phone keyboards auto-capitalize and add spaces).
+    if (entered.trim().toLowerCase() !== ADMIN_PASSPHRASE.trim().toLowerCase()) { window.alert("Incorrect passphrase."); return; }
+    state.screen = "admin";
+    render();
+  };
+  const pop = el.querySelector("#pop"), age = el.querySelector("#c-age"), agr = el.querySelector("#c-agree"), go = el.querySelector("#go");
+  const chk = () => { go.disabled = !(pop.value && age.checked && agr.checked); };
+  pop.onchange = chk; age.onchange = chk; agr.onchange = chk;
+  go.onclick = async () => {
+    go.disabled = true; go.textContent = "Setting up\u2026";
+    state.population = pop.value;
+    state.participantId = uid();
+    state.condition = await assignCondition(state.population);
+    state.trialOrder = shuffledIndices(PART_LIBRARY.length);
+    state.screen = "intake"; render();
+  };
+}
+
+// ---------------- INTAKE ----------------
+const INTAKE_QUESTIONS = [
+  { key: "aiUsageFrequency", label: "How often do you use AI tools (ChatGPT, Copilot, or similar)?",
+    options: ["Never", "Rarely", "Sometimes", "Often", "Very often"] },
+  { key: "verificationHabit", label: "When an AI tool gives you an answer, how often do you verify it yourself?",
+    options: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+  { key: "qcFamiliarity", label: "How familiar are you with quality control or manufacturing inspection work?",
+    options: ["Not at all", "Slightly", "Somewhat", "Very", "Extremely"] },
+];
+
+function renderIntake() {
+  const el = card(`
+    <span class="eyebrow">About You</span>
+    <h1>A few quick questions</h1>
+    <p>These help us understand how prior experience relates to performance on the task.</p>
+    ${INTAKE_QUESTIONS.map((q) => `
+      <div class="field">
+        <label class="field-label">${q.label}</label>
+        <select class="ik" data-key="${q.key}">
+          <option value="">Select one\u2026</option>
+          ${q.options.map((o, i) => `<option value="${i + 1}">${o}</option>`).join("")}
+        </select>
+      </div>`).join("")}
+    <div class="field">
+      <label class="field-label">In general, how much do you trust AI tools to give accurate information?</label>
+      ${scaleRowHTML("generalAITrust", 1, 7, "Not at all", "Completely")}
+    </div>
+    <div class="actions"><button class="btn-primary" id="next" disabled>Continue</button></div>
+  `);
+  const ans = {};
+  const chk = () => {
+    el.querySelector("#next").disabled =
+      !["aiUsageFrequency", "verificationHabit", "qcFamiliarity", "generalAITrust"].every((k) => ans[k] !== undefined);
+  };
+  el.querySelectorAll(".ik").forEach((s) => {
+    s.onchange = () => { if (s.value) ans[s.dataset.key] = Number(s.value); else delete ans[s.dataset.key]; chk(); };
+  });
+  el.querySelectorAll(".scale-btn").forEach((b) => {
+    b.onclick = () => {
+      ans.generalAITrust = Number(b.dataset.v);
+      el.querySelectorAll(".scale-btn").forEach((x) => x.classList.remove("selected"));
+      b.classList.add("selected"); chk();
+    };
+  });
+  el.querySelector("#next").onclick = () => { state.intakeAnswers = ans; state.screen = "instructions"; render(); };
+}
+
+// ---------------- INSTRUCTIONS ----------------
+function renderInstructions() {
+  const isAI = state.condition !== "none";
+  card(`
+    <span class="eyebrow">Instructions</span>
+    <h1>How this works</h1>
+    <p>You will see ${PRACTICE_LIBRARY.length} practice parts, then ${PART_LIBRARY.length} scored parts. Each part shows an image. You can open the <strong>Inspection Data</strong> panel at any time to see a measurement reading, the specified tolerance, and an inspector's note.</p>
+    <p><strong>A part fails if any one of these is true:</strong></p>
+    <p style="margin-left:16px;">1. A clear visible defect is present.<br/>
+       2. The measurement falls outside the specified tolerance.<br/>
+       3. The inspector's note documents a <strong>confirmed condition on this specific unit</strong> (for example, a crack found by a dye-penetrant test, or a failed hardness check on this serial number).</p>
+    <p>Notes about the <strong>lot, the vendor, or other parts</strong> are background information. They do not by themselves fail this unit. Some readings also carry a margin of error, and some parts are genuinely hard to call.</p>
+    ${isAI ? `<p>After you give your own assessment, an automated inspection tool will show you its recommendation and its reasoning. You will then give a final answer. You are free to keep your original call or change it.</p>` : ""}
+    <p>There is no time limit. Work at a natural, steady pace.</p>
+    <div class="actions"><button class="btn-primary" id="go">Start Practice</button></div>
+  `);
+  app.querySelector("#go").onclick = () => { state.screen = "practice"; render(); };
+}
+
+// ---------------- TRIAL (single card, progressive reveal) ----------------
+function renderTrial(isPractice) {
+  let part, idx = null;
+  if (isPractice) part = PRACTICE_LIBRARY[state.practiceIdx];
+  else { idx = state.trialOrder[state.trialIdx]; part = PART_LIBRARY[idx]; }
+
+  const showAI = state.condition !== "none";
+  const total = isPractice ? PRACTICE_LIBRARY.length : PART_LIBRARY.length;
+  const current = (isPractice ? state.practiceIdx : state.trialIdx) + 1;
+  const advice = showAI ? aiAdvice(part, isPractice ? false : WRONG_INDICES[state.condition].includes(idx)) : null;
+
+  const el = card(`
+    <span class="eyebrow">${isPractice ? "Practice \u2014 Not Scored" : "Trial " + current + " of " + total}</span>
+    ${isPractice ? "" : stepTrack(current - 1, total)}
+    <div class="part-frame">${drawPart(part)}</div>
+    <div class="part-id mono">UNIT ${part.id}</div>
+    <button class="dropdown-toggle" id="ev-t"><span>+ Inspection Data</span></button>
+    <div class="dropdown-panel" id="ev-p" style="display:none;">${evidencePanelHTML(part)}</div>
+    <div id="flow"></div>
+  `);
+
+  const t0 = performance.now();
+  let evidenceChecked = false, evidenceViewTimeMs = null, evidenceReopened = false;
+  const rec = {};
+
+  el.querySelector("#ev-t").onclick = () => {
+    const p = el.querySelector("#ev-p");
+    const opening = p.style.display === "none";
+    p.style.display = opening ? "block" : "none";
+    el.querySelector("#ev-t").innerHTML = opening ? "<span>\u2212 Inspection Data</span>" : "<span>+ Inspection Data</span>";
+    if (opening) {
+      if (!evidenceChecked) { evidenceChecked = true; evidenceViewTimeMs = Math.round(performance.now() - t0); }
+      else if (rec.initialResponse) evidenceReopened = true;
+    }
+  };
+
+  const flow = el.querySelector("#flow");
+
+  // --- Stage 1: own assessment ---
+  function stageInitial() {
+    flow.innerHTML = `
+      <div class="stage-block">
+        <h3>${showAI ? "Your assessment" : "Your decision"}</h3>
+        <div class="choice-row">
+          <button class="choice-btn pass" data-v="Pass">Pass</button>
+          <button class="choice-btn fail" data-v="Fail">Fail</button>
+        </div>
+      </div>`;
+    flow.querySelectorAll(".choice-btn").forEach((b) => {
+      b.onclick = () => {
+        rec.initialResponse = b.dataset.v;
+        rec.initialResponseTimeMs = Math.round(performance.now() - t0);
+        stageInitialConfidence();
+      };
+    });
+  }
+
+  function stageInitialConfidence() {
+    flow.innerHTML = `
+      <div class="stage-block">
+        <div class="locked-chip">Your assessment: <b>${rec.initialResponse.toUpperCase()}</b></div>
+        <h3>How confident are you in that call?</h3>
+        ${scaleRowHTML("ic", 1, 5, "Not confident", "Very confident")}
+      </div>`;
+    flow.querySelectorAll(".scale-btn").forEach((b) => {
+      b.onclick = () => {
+        rec.initialConfidence = Number(b.dataset.v);
+        if (!showAI) { finalize(rec.initialResponse, rec.initialConfidence); return; }
+        stageAdvice();
+      };
+    });
+  }
+
+  // --- Stage 2: AI advice + final call ---
+  function stageAdvice() {
+    const conflict = rec.initialResponse !== advice.verdict;
+    rec.adviceShownAtMs = Math.round(performance.now() - t0);
+    flow.innerHTML = `
+      <div class="stage-block">
+        <div class="locked-chip">Your assessment: <b>${rec.initialResponse.toUpperCase()}</b></div>
+        <div class="ai-block">
+          <div class="ai-verdict-line">
+            <span class="ai-badge">AI</span>
+            <span class="ai-verdict ${advice.verdict === "Pass" ? "yes" : "no"}">Recommendation: ${advice.verdict === "Pass" ? "PASS" : "FAIL"}</span>
+          </div>
+          <div class="ai-citation">${advice.citation}</div>
+        </div>
+        <h3>Your final decision</h3>
+        <div class="choice-row">
+          <button class="choice-btn pass" data-v="Pass">Pass</button>
+          <button class="choice-btn fail" data-v="Fail">Fail</button>
+        </div>
+      </div>`;
+    rec.conflict = conflict;
+    flow.querySelectorAll(".choice-btn").forEach((b) => {
+      b.onclick = () => {
+        rec.finalResponse = b.dataset.v;
+        rec.finalResponseTimeMs = Math.round(performance.now() - t0);
+        stageFinalConfidence();
+      };
+    });
+  }
+
+  function stageFinalConfidence() {
+    flow.innerHTML = `
+      <div class="stage-block">
+        <div class="locked-chip">Final decision: <b>${rec.finalResponse.toUpperCase()}</b></div>
+        <h3>How confident are you in your final decision?</h3>
+        ${scaleRowHTML("fc", 1, 5, "Not confident", "Very confident")}
+      </div>`;
+    flow.querySelectorAll(".scale-btn").forEach((b) => {
+      b.onclick = () => finalize(rec.finalResponse, Number(b.dataset.v));
+    });
+  }
+
+  function finalize(finalResponse, finalConfidence) {
+    if (isPractice) {
+      state.practiceIdx += 1;
+      if (state.practiceIdx >= PRACTICE_LIBRARY.length) { state.screen = "trial"; state.trialIdx = 0; }
+      render();
+      return;
+    }
+    const gt = part.groundTruth;
+    const initialCorrect = rec.initialResponse === gt;
+    const finalCorrect = finalResponse === gt;
+    const aiCorrect = advice ? advice.verdict === gt : null;
+    const conflict = advice ? rec.initialResponse !== advice.verdict : null;
+    const switched = advice ? finalResponse !== rec.initialResponse : null;
+
+    state.results.push({
+      trialNumber: current, partId: part.id, difficulty: difficultyOf(part), groundTruth: gt,
+      marginRatio: part.visualOnly ? null : Number(marginRatio(part.measurement).toFixed(3)),
+      initialResponse: rec.initialResponse, initialCorrect, initialConfidence: rec.initialConfidence,
+      initialResponseTimeMs: rec.initialResponseTimeMs,
+      aiRecommendation: advice ? advice.verdict : null,
+      aiBasis: advice ? advice.basis : null,
+      aiCitation: advice ? advice.citation : null,
+      aiCorrect, conflict,
+      finalResponse, finalCorrect, finalConfidence,
+      finalResponseTimeMs: rec.finalResponseTimeMs ?? rec.initialResponseTimeMs,
+      totalTimeMs: Math.round(performance.now() - t0),
+      switched,
+      switchedToAI: advice ? (switched && finalResponse === advice.verdict) : null,
+      heldAgainstAI: advice ? (conflict && !switched) : null,
+      confidenceShift: rec.initialConfidence != null ? finalConfidence - rec.initialConfidence : null,
+      evidenceChecked, evidenceViewTimeMs, evidenceReopened,
+    });
+
+    state.trialIdx += 1;
+    if (TRUST_PROBE_AFTER.includes(state.trialIdx) && state.trialIdx < PART_LIBRARY.length) state.screen = "trustprobe";
+    else if (state.trialIdx >= PART_LIBRARY.length) state.screen = "post";
+    else state.screen = "trial";
+    render();
+  }
+
+  stageInitial();
+}
+
+// ---------------- TRUST PROBE ----------------
+function renderTrustProbe() {
+  const isAI = state.condition !== "none";
+  const el = card(`
+    <span class="eyebrow">Quick Check-In</span>
+    <h2>${isAI ? "How much do you trust the inspection tool's recommendations so far?" : "How confident are you in your inspection decisions so far?"}</h2>
+    ${scaleRowHTML("probe", 1, 7, "Not at all", "Completely")}
+    <p class="note-sm">${state.trialIdx} of ${PART_LIBRARY.length} parts complete.</p>
+  `);
+  el.querySelectorAll(".scale-btn").forEach((b) => {
+    b.onclick = () => {
+      state.trustProbes.push({ afterTrial: state.trialIdx, value: Number(b.dataset.v) });
+      state.screen = "trial"; render();
+    };
+  });
+}
+
+// ---------------- POST ----------------
+const WORKLOAD_ITEMS = [
+  ["mental", "How mentally demanding was the task?"],
+  ["temporal", "How rushed or hurried did you feel?"],
+  ["performance", "How successful were you at the task?"],
+  ["effort", "How hard did you have to work to achieve your performance?"],
+  ["frustration", "How irritated, stressed, or annoyed were you?"],
+];
+
+function renderPost() {
+  const isAI = state.condition !== "none";
+  const el = card(`
+    <span class="eyebrow">Almost Done</span>
+    <h1>A few final questions</h1>
+    ${isAI ? `
+      <div class="field"><label class="field-label">Overall, how much did you trust the inspection tool's recommendations?</label>${scaleRowHTML("trust", 1, 7, "Not at all", "Completely")}</div>
+      <div class="field"><label class="field-label">How useful was the tool in helping you make correct decisions?</label>${scaleRowHTML("useful", 1, 7, "Not useful", "Extremely useful")}</div>
+      <div class="field"><label class="field-label">How accurate do you think the tool was?</label>${scaleRowHTML("perceivedAccuracy", 1, 7, "Rarely correct", "Almost always correct")}</div>
+    ` : ""}
+    ${WORKLOAD_ITEMS.map(([k, q]) => `<div class="field"><label class="field-label">${q}</label>${scaleRowHTML(k, 1, 7, "Very low", "Very high")}</div>`).join("")}
+    <div class="field">
+      <label class="field-label" for="fbName">Name <span class="opt">(optional)</span></label>
+      <input type="text" class="txt" id="fbName" maxlength="120" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="fbText">Questions, comments, or suggestions <span class="opt">(optional)</span></label>
+      <textarea class="txt" id="fbText" rows="4" maxlength="2000"></textarea>
+      <p class="note-sm">Both boxes are optional. Anything you enter here is saved separately from your answers and is not linked to them, so your responses stay anonymous.</p>
+    </div>
+    <div class="actions"><button class="btn-primary" id="sub" disabled>Submit</button></div>
+  `);
+  const need = isAI ? ["trust", "useful", "perceivedAccuracy", ...WORKLOAD_ITEMS.map((w) => w[0])] : WORKLOAD_ITEMS.map((w) => w[0]);
+  const chk = () => { el.querySelector("#sub").disabled = !state.preview && !need.every((k) => state.postAnswers[k] !== undefined); };
+  if (state.preview) chk(); // admins can skip straight through
+  el.querySelectorAll(".scale-btn").forEach((b) => {
+    b.onclick = () => {
+      const g = b.closest(".scale-row").dataset.group;
+      state.postAnswers[g] = Number(b.dataset.v);
+      b.closest(".scale-row").querySelectorAll(".scale-btn").forEach((x) => x.classList.remove("selected"));
+      b.classList.add("selected"); chk();
+    };
+  });
+  el.querySelector("#sub").onclick = async () => {
+    const s = el.querySelector("#sub"); s.disabled = true; s.textContent = "Saving\u2026";
+    const fbName = el.querySelector("#fbName").value.trim();
+    const fbText = el.querySelector("#fbText").value.trim();
+    await saveResponse();
+    // Optional contact/feedback goes to its own tab with no participant ID or
+    // timestamp, so it cannot be tied back to a session's answers.
+    if ((fbName || fbText) && !OFFLINE() && !state.preview) {
+      try { await postFeedback({ name: fbName, comments: fbText }); }
+      catch (e) { console.error("Feedback save failed", e); }
+    }
+    state.screen = "done"; render();
+  };
+}
+
+async function saveResponse() {
+  if (state.preview) return "preview"; // admin preview never writes anything
+  const record = {
+    participantId: state.participantId, population: state.population, condition: state.condition,
+    timestamp: new Date().toISOString(),
+    trials: state.results, trustProbes: state.trustProbes,
+    post: state.postAnswers, intake: state.intakeAnswers,
+  };
+  pushLocal(record);
+  if (OFFLINE()) { downloadFallback(record); return "offline"; }
+  try { return await postSession(record); }
+  catch (e) { console.error("Remote save failed", e); downloadFallback(record); return "fallback"; }
+}
+
+function renderDone() {
+  card(`
+    <span class="eyebrow">Thank You</span>
+    <h1>You're finished. Thank you.</h1>
+    <p><strong>What this study was about:</strong> we are studying how the reliability of an AI decision-support tool affects human accuracy and reliance, specifically whether people set aside their own correct judgment when an AI disagrees with them. Some of the tool's recommendations were intentionally incorrect as part of the controlled design, and some parts were built to be genuinely impossible to call from the information shown.</p>
+    <p>Your responses were recorded anonymously. Any name or comments you chose to add were saved separately and are not linked to your answers. If you have questions, please contact the research team.</p>
+  `);
+}
+
+// ---------------- ADMIN DASHBOARD ----------------
+async function loadAllResponses() {
+  let remote = [];
+  if (!OFFLINE()) {
+    try { remote = await fetchAllSessions(); } catch (e) { console.error("Endpoint unreachable", e); }
+  }
+  const local = localBuffer();
+  const seen = new Set(remote.map((r) => r.participantId));
+  const merged = remote.concat(local.filter((r) => !seen.has(r.participantId)));
+  merged.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+  return merged;
+}
+function mean(a) {
+  const v = a.filter((x) => x !== null && x !== undefined && !Number.isNaN(x));
+  return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null;
+}
+function sd(a) {
+  const v = a.filter((x) => x !== null && x !== undefined && !Number.isNaN(x));
+  if (v.length < 2) return null;
+  const m = v.reduce((s, x) => s + x, 0) / v.length;
+  return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
+}
+function pct(n) { return n === null || n === undefined ? "\u2014" : Math.round(n * 100) + "%"; }
+function fx(n, d) { return n === null || n === undefined ? "\u2014" : n.toFixed(d); }
+
+const DIFFS = ["Visual", "Measurement", "Judgment", "Ambiguous"];
+
+function computeStats(records) {
+  const out = {};
+  CONDITIONS.forEach((c) => {
+    const recs = records.filter((r) => r.condition === c);
+    const T = recs.flatMap((r) => r.trials);
+    const aiT = T.filter((t) => t.aiRecommendation !== null);
+    const conf = aiT.filter((t) => t.conflict === true);
+    const badConf = conf.filter((t) => t.initialCorrect === true && t.aiCorrect === false);
+    const goodConf = conf.filter((t) => t.initialCorrect === false && t.aiCorrect === true);
+    const perPerson = (fn) => recs.map(fn);
+    out[c] = {
+      n: recs.length, trials: T.length,
+      initAcc: mean(T.map((t) => (t.initialCorrect ? 1 : 0))),
+      finalAcc: mean(T.map((t) => (t.finalCorrect ? 1 : 0))),
+      finalAccSD: sd(perPerson((r) => mean(r.trials.map((t) => (t.finalCorrect ? 1 : 0))))),
+      rt: mean(T.map((t) => t.totalTimeMs)),
+      evid: mean(T.map((t) => (t.evidenceChecked ? 1 : 0))),
+      evidSD: sd(perPerson((r) => mean(r.trials.map((t) => (t.evidenceChecked ? 1 : 0))))),
+      conflictRate: aiT.length ? mean(aiT.map((t) => (t.conflict ? 1 : 0))) : null,
+      switchToAI: conf.length ? mean(conf.map((t) => (t.switchedToAI ? 1 : 0))) : null,
+      held: conf.length ? mean(conf.map((t) => (t.heldAgainstAI ? 1 : 0))) : null,
+      bias: badConf.length ? mean(badConf.map((t) => (t.switchedToAI ? 1 : 0))) : null,
+      biasN: badConf.length,
+      rescue: goodConf.length ? mean(goodConf.map((t) => (t.switchedToAI ? 1 : 0))) : null,
+      rescueN: goodConf.length,
+      agree: aiT.length ? mean(aiT.map((t) => (t.finalResponse === t.aiRecommendation ? 1 : 0))) : null,
+      confShift: mean(T.map((t) => t.confidenceShift)),
+      trust: c === "none" ? null : mean(recs.map((r) => r.post.trust)),
+      useful: c === "none" ? null : mean(recs.map((r) => r.post.useful)),
+      percAcc: c === "none" ? null : mean(recs.map((r) => r.post.perceivedAccuracy)),
+      workload: mean(recs.map((r) => mean(WORKLOAD_ITEMS.map((w) => r.post[w[0]])))),
+      byDiff: DIFFS.reduce((acc, d) => {
+        const dT = T.filter((t) => t.difficulty === d);
+        const dConf = dT.filter((t) => t.conflict === true);
+        const dBad = dConf.filter((t) => t.initialCorrect === true && t.aiCorrect === false);
+        acc[d] = {
+          acc: dT.length ? mean(dT.map((t) => (t.finalCorrect ? 1 : 0))) : null,
+          evid: dT.length ? mean(dT.map((t) => (t.evidenceChecked ? 1 : 0))) : null,
+          switchToAI: dConf.length ? mean(dConf.map((t) => (t.switchedToAI ? 1 : 0))) : null,
+          bias: dBad.length ? mean(dBad.map((t) => (t.switchedToAI ? 1 : 0))) : null,
+          biasN: dBad.length,
+        };
+        return acc;
+      }, {}),
+      probes: [0, 1].map((i) => mean(recs.map((r) => (r.trustProbes && r.trustProbes[i] ? r.trustProbes[i].value : null)))),
+    };
+  });
+  return out;
+}
+
+function exclusionFlags(r) {
+  const easy = r.trials.filter((t) => t.difficulty === "Visual");
+  const easyAcc = mean(easy.map((t) => (t.initialCorrect ? 1 : 0)));
+  const fast = r.trials.filter((t) => t.totalTimeMs < 1500).length;
+  const flags = [];
+  if (easyAcc !== null && easyAcc < 0.67) flags.push("low visual-trial accuracy");
+  if (fast >= 5) flags.push("many sub-1.5s trials");
+  return { easyAcc, flags };
+}
+
+function toCSV(records) {
+  const head = ["ParticipantID","Population","Condition","Timestamp","TrialNumber","PartID","Difficulty","MarginRatio","GroundTruth",
+    "InitialResponse","InitialCorrect","InitialConfidence","InitialResponseTime_ms",
+    "AI_Recommendation","AI_Basis","AI_Citation","AI_Correct","Conflict",
+    "FinalResponse","FinalCorrect","FinalConfidence","ConfidenceShift","FinalResponseTime_ms","TotalTime_ms",
+    "Switched","SwitchedToAI","HeldAgainstAI","EvidenceChecked","EvidenceViewTime_ms","EvidenceReopened",
+    "TrustProbe1","TrustProbe2","PostTrust","PostUsefulness","PostPerceivedAccuracy",
+    "Mental","Temporal","Performance","Effort","Frustration",
+    "Intake_AIUsage","Intake_VerificationHabit","Intake_QCFamiliarity","Intake_GeneralAITrust"];
+  const esc = (s) => '"' + String(s ?? "").replace(/"/g, '""') + '"';
+  const rows = [head.join(",")];
+  records.forEach((r) => {
+    const ik = r.intake || {}, tp = r.trustProbes || [];
+    r.trials.forEach((t) => {
+      rows.push([r.participantId, r.population, r.condition, r.timestamp, t.trialNumber, t.partId, t.difficulty, t.marginRatio ?? "", t.groundTruth,
+        t.initialResponse, t.initialCorrect, t.initialConfidence, t.initialResponseTimeMs,
+        t.aiRecommendation ?? "", t.aiBasis ?? "", esc(t.aiCitation), t.aiCorrect ?? "", t.conflict ?? "",
+        t.finalResponse, t.finalCorrect, t.finalConfidence, t.confidenceShift ?? "", t.finalResponseTimeMs, t.totalTimeMs,
+        t.switched ?? "", t.switchedToAI ?? "", t.heldAgainstAI ?? "", t.evidenceChecked, t.evidenceViewTimeMs ?? "", t.evidenceReopened,
+        tp[0] ? tp[0].value : "", tp[1] ? tp[1].value : "", r.post.trust ?? "", r.post.useful ?? "", r.post.perceivedAccuracy ?? "",
+        r.post.mental ?? "", r.post.temporal ?? "", r.post.performance ?? "", r.post.effort ?? "", r.post.frustration ?? "",
+        ik.aiUsageFrequency ?? "", ik.verificationHabit ?? "", ik.qcFamiliarity ?? "", ik.generalAITrust ?? ""].join(","));
+    });
+  });
+  return rows.join("\n");
+}
+
+function toSummaryCSV(records) {
+  const head = ["ParticipantID","Population","Condition","Timestamp","InitialAccuracy","FinalAccuracy",
+    "ConflictRate","SwitchToAIRate","HeldAgainstAIRate","BadAdviceSwitchRate","BadAdviceN","RescueRate","RescueN",
+    "EvidenceCheckRate","MeanTotalTime_ms","MeanConfidenceShift",
+    "TrustProbe1","TrustProbe2","PostTrust","PostUsefulness","PostPerceivedAccuracy","MeanWorkload",
+    "EasyTrialAccuracy","ExclusionFlags",
+    "Intake_AIUsage","Intake_VerificationHabit","Intake_QCFamiliarity","Intake_GeneralAITrust"];
+  const rows = [head.join(",")];
+  records.forEach((r) => {
+    const ik = r.intake || {}, tp = r.trustProbes || [];
+    const T = r.trials, aiT = T.filter((t) => t.aiRecommendation !== null);
+    const conf = aiT.filter((t) => t.conflict === true);
+    const bad = conf.filter((t) => t.initialCorrect === true && t.aiCorrect === false);
+    const good = conf.filter((t) => t.initialCorrect === false && t.aiCorrect === true);
+    const ex = exclusionFlags(r);
+    rows.push([r.participantId, r.population, r.condition, r.timestamp,
+      fx(mean(T.map((t) => (t.initialCorrect ? 1 : 0))), 3), fx(mean(T.map((t) => (t.finalCorrect ? 1 : 0))), 3),
+      aiT.length ? fx(mean(aiT.map((t) => (t.conflict ? 1 : 0))), 3) : "",
+      conf.length ? fx(mean(conf.map((t) => (t.switchedToAI ? 1 : 0))), 3) : "",
+      conf.length ? fx(mean(conf.map((t) => (t.heldAgainstAI ? 1 : 0))), 3) : "",
+      bad.length ? fx(mean(bad.map((t) => (t.switchedToAI ? 1 : 0))), 3) : "", bad.length,
+      good.length ? fx(mean(good.map((t) => (t.switchedToAI ? 1 : 0))), 3) : "", good.length,
+      fx(mean(T.map((t) => (t.evidenceChecked ? 1 : 0))), 3), fx(mean(T.map((t) => t.totalTimeMs)), 0),
+      fx(mean(T.map((t) => t.confidenceShift)), 3),
+      tp[0] ? tp[0].value : "", tp[1] ? tp[1].value : "",
+      r.post.trust ?? "", r.post.useful ?? "", r.post.perceivedAccuracy ?? "",
+      fx(mean(WORKLOAD_ITEMS.map((w) => r.post[w[0]])), 2),
+      fx(ex.easyAcc, 3), '"' + ex.flags.join("; ") + '"',
+      ik.aiUsageFrequency ?? "", ik.verificationHabit ?? "", ik.qcFamiliarity ?? "", ik.generalAITrust ?? ""].join(","));
+  });
+  return rows.join("\n");
+}
+
+function renderAdmin() {
+  const el = card(`
+    <span class="eyebrow">Research Team Only</span>
+    <h1>Data Dashboard</h1>
+    <p>Loads every completed session, computes the running research metrics, and exports the full dataset.</p>
+    <div id="conn" class="note-sm" style="margin-bottom:10px;"></div>
+    <div class="actions" style="justify-content:flex-start;gap:10px;margin-top:0;margin-bottom:6px;flex-wrap:wrap;">
+      <button class="btn-primary" id="load">Load / Refresh Data</button>
+      <button class="btn-ghost" id="csv" disabled>Trial-Level CSV</button>
+      <button class="btn-ghost" id="sum" disabled>Participant Summary CSV</button>
+      <button class="btn-ghost" id="json" disabled>Raw JSON</button>
+      <button class="btn-ghost" id="ping">Test Connection</button>
+      <button class="btn-ghost" id="localdump">Export Browser Backup</button>
+    </div>
+    <div class="field" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line);">
+      <label class="field-label" for="pvCond">Preview participant screens <span class="opt">(nothing is saved)</span></label>
+      <div class="actions" style="justify-content:flex-start;gap:8px;margin:0;flex-wrap:wrap;">
+        <select id="pvCond" style="width:auto;">
+          <option value="high">High-reliability AI</option>
+          <option value="low">Low-reliability AI</option>
+          <option value="none">No AI</option>
+        </select>
+        <button class="btn-ghost" data-pv="intake">Intake</button>
+        <button class="btn-ghost" data-pv="instructions">Instructions</button>
+        <button class="btn-ghost" data-pv="practice">Practice</button>
+        <button class="btn-ghost" data-pv="trial">Trials</button>
+        <button class="btn-ghost" data-pv="trustprobe">Check-in</button>
+        <button class="btn-ghost" data-pv="post">Final survey</button>
+        <button class="btn-ghost" data-pv="done">Thank-you</button>
+      </div>
+    </div>
+    <div id="dash"></div>
+    <div style="margin-top:20px;"><a href="#" id="back" style="font-size:11px;color:var(--ink-faint);text-decoration:none;">&larr; Back to participant view</a></div>
+  `);
+  el.querySelectorAll("[data-pv]").forEach((b) => {
+    b.onclick = () => startPreview(b.dataset.pv, el.querySelector("#pvCond").value);
+  });
+  el.querySelector("#back").onclick = (e) => { e.preventDefault(); state = freshState(); render(); };
+  const conn = el.querySelector("#conn");
+  const setConn = (html) => { conn.innerHTML = html; };
+  setConn(OFFLINE()
+    ? '<b style="color:var(--safety)">OFFLINE MODE.</b> No endpoint configured. Sessions stay in this browser and download as .json when each participant finishes.'
+    : '<b>Endpoint configured.</b> Click <b>Test Connection</b> to confirm it is reachable.');
+  el.querySelector("#ping").onclick = async () => {
+    if (OFFLINE()) { setConn('<b style="color:var(--safety)">OFFLINE MODE.</b> ENDPOINT_URL is empty in this file.'); return; }
+    setConn("Testing\u2026");
+    try {
+      const ok = await pingEndpoint();
+      setConn(ok
+        ? '<b style="color:var(--pass)">CONNECTED.</b> The endpoint responded. Data will save to your sheet.'
+        : '<b style="color:var(--fail)">Endpoint replied with an error.</b> Check the Apps Script deployment.');
+    } catch (e) {
+      setConn('<b style="color:var(--fail)">Could not reach the endpoint.</b> Check that the URL ends in /exec and that the deployment is set to "Anyone". Sessions are still being kept in this browser.');
+    }
+  };
+  el.querySelector("#localdump").onclick = () => {
+    const lb = localBuffer();
+    if (!lb.length) { alert("No sessions buffered in this browser."); return; }
+    dl(JSON.stringify(lb, null, 2), "qc_local_backup.json", "application/json");
+  };
+  let loaded = [];
+  el.querySelector("#load").onclick = async () => {
+    el.querySelector("#load").textContent = "Loading\u2026";
+    loaded = await loadAllResponses();
+    el.querySelector("#load").textContent = "Reload";
+    ["csv", "sum", "json"].forEach((id) => { el.querySelector("#" + id).disabled = loaded.length === 0; });
+    const S = computeStats(loaded);
+    const pop = { student: { none: 0, high: 0, low: 0 }, professional: { none: 0, high: 0, low: 0 } };
+    loaded.forEach((r) => { if (pop[r.population] && pop[r.population][r.condition] !== undefined) pop[r.population][r.condition] += 1; });
+
+    el.querySelector("#dash").innerHTML = `
+      <div class="stat-grid">
+        <div class="stat-box"><div class="num">${loaded.length}</div><div class="lbl">TOTAL SESSIONS</div></div>
+        <div class="stat-box"><div class="num">${S.none.n}</div><div class="lbl">NO-AI</div></div>
+        <div class="stat-box"><div class="num">${S.high.n}</div><div class="lbl">HIGH-RELIABILITY</div></div>
+        <div class="stat-box"><div class="num">${S.low.n}</div><div class="lbl">LOW-RELIABILITY</div></div>
+      </div>
+
+      <hr class="divider"/>
+      <h2>Primary Measures by Condition</h2>
+      <div class="scroll-table"><table class="admin-table">
+        <thead><tr><th>Condition</th><th>N</th><th>Initial Acc.</th><th>Final Acc. (SD)</th><th>Evidence-Check (SD)</th><th>Bad-Advice Switch</th><th>Mean Time (ms)</th></tr></thead>
+        <tbody>${CONDITIONS.map((c) => `<tr>
+          <td><span class="cond-chip ${c}">${CONDITION_LABEL[c]}</span></td><td>${S[c].n}</td>
+          <td>${pct(S[c].initAcc)}</td><td>${pct(S[c].finalAcc)} (${fx(S[c].finalAccSD, 3)})</td>
+          <td>${pct(S[c].evid)} (${fx(S[c].evidSD, 3)})</td>
+          <td>${pct(S[c].bias)}${S[c].biasN ? ` <span style="color:var(--ink-faint)">n=${S[c].biasN}</span>` : ""}</td>
+          <td>${fx(S[c].rt, 0)}</td></tr>`).join("")}</tbody>
+      </table></div>
+      <p class="note-sm"><b>Bad-Advice Switch</b> is the headline automation-bias measure: of trials where the participant's own initial call was correct and the AI disagreed and was wrong, how often they abandoned their correct answer. <b>n</b> is the number of such trials pooled across that group.</p>
+
+      <hr class="divider"/>
+      <h2>Reliance Detail (AI conditions)</h2>
+      <div class="scroll-table"><table class="admin-table">
+        <thead><tr><th>Condition</th><th>Conflict Rate</th><th>Switched to AI</th><th>Held Own Call</th><th>Rescue Rate</th><th>Final Agreement</th><th>Conf. Shift</th></tr></thead>
+        <tbody>${["high", "low"].map((c) => `<tr>
+          <td><span class="cond-chip ${c}">${CONDITION_LABEL[c]}</span></td>
+          <td>${pct(S[c].conflictRate)}</td><td>${pct(S[c].switchToAI)}</td><td>${pct(S[c].held)}</td>
+          <td>${pct(S[c].rescue)}${S[c].rescueN ? ` <span style="color:var(--ink-faint)">n=${S[c].rescueN}</span>` : ""}</td>
+          <td>${pct(S[c].agree)}</td><td>${fx(S[c].confShift, 2)}</td></tr>`).join("")}</tbody>
+      </table></div>
+      <p class="note-sm"><b>Rescue Rate</b> is the mirror of bias: of conflicts where the participant was wrong and the AI was right, how often the AI corrected them. Reliance is only harmful if bias exceeds rescue.</p>
+
+      <hr class="divider"/>
+      <h2>Difficulty Breakdown</h2>
+      <div class="scroll-table"><table class="admin-table">
+        <thead><tr><th>Condition</th><th>Metric</th>${DIFFS.map((d) => `<th>${d}</th>`).join("")}</tr></thead>
+        <tbody>${CONDITIONS.map((c) => `
+          <tr><td rowspan="3"><span class="cond-chip ${c}">${CONDITION_LABEL[c]}</span></td><td>Final accuracy</td>${DIFFS.map((d) => `<td>${pct(S[c].byDiff[d].acc)}</td>`).join("")}</tr>
+          <tr><td>Evidence-check</td>${DIFFS.map((d) => `<td>${pct(S[c].byDiff[d].evid)}</td>`).join("")}</tr>
+          <tr><td>Bad-advice switch</td>${DIFFS.map((d) => `<td>${pct(S[c].byDiff[d].bias)}${S[c].byDiff[d].biasN ? ` <span style="color:var(--ink-faint)">n=${S[c].byDiff[d].biasN}</span>` : ""}</td>`).join("")}</tr>
+        `).join("")}</tbody>
+      </table></div>
+      <p class="note-sm">This table is the reliability &times; difficulty interaction the study is built to test. Ambiguous parts cannot be resolved from the data shown to the participant, so behaviour there reflects reliance rather than skill.</p>
+
+      <hr class="divider"/>
+      <h2>Trust Trajectory</h2>
+      <div class="scroll-table"><table class="admin-table">
+        <thead><tr><th>Condition</th><th>After trial 8</th><th>After trial 16</th><th>End of session</th><th>Perceived accuracy</th></tr></thead>
+        <tbody>${["high", "low"].map((c) => `<tr><td><span class="cond-chip ${c}">${CONDITION_LABEL[c]}</span></td>
+          <td>${fx(S[c].probes[0], 2)}</td><td>${fx(S[c].probes[1], 2)}</td><td>${fx(S[c].trust, 2)}</td><td>${fx(S[c].percAcc, 2)}</td></tr>`).join("")}</tbody>
+      </table></div>
+      <p class="note-sm">Whether trust in the low-reliability group falls across these three points, or holds despite repeated errors, is the direct test of the recalibration question.</p>
+
+      <hr class="divider"/>
+      <h2>Population Balance</h2>
+      <table class="admin-table">
+        <thead><tr><th>Population</th><th>No-AI</th><th>High</th><th>Low</th></tr></thead>
+        <tbody>
+          <tr><td>Student</td><td>${pop.student.none}</td><td>${pop.student.high}</td><td>${pop.student.low}</td></tr>
+          <tr><td>Professional</td><td>${pop.professional.none}</td><td>${pop.professional.high}</td><td>${pop.professional.low}</td></tr>
+        </tbody>
+      </table>
+
+      <hr class="divider"/>
+      <h2>All Sessions (${loaded.length})</h2>
+      <div class="scroll-table"><table class="admin-table">
+        <thead><tr><th>Participant</th><th>Pop.</th><th>Condition</th><th>Final Acc.</th><th>Visual Acc.</th><th>Flags</th><th>Completed</th></tr></thead>
+        <tbody>${loaded.length ? loaded.map((r) => {
+          const ex = exclusionFlags(r);
+          return `<tr><td class="mono">${r.participantId}</td><td>${r.population}</td>
+            <td><span class="cond-chip ${r.condition}">${CONDITION_LABEL[r.condition]}</span></td>
+            <td>${pct(mean(r.trials.map((t) => (t.finalCorrect ? 1 : 0))))}</td>
+            <td>${pct(ex.easyAcc)}</td>
+            <td>${ex.flags.length ? `<span class="flag">${ex.flags.join("; ")}</span>` : "\u2014"}</td>
+            <td>${new Date(r.timestamp).toLocaleString()}</td></tr>`;
+        }).join("") : `<tr><td colspan="7">No responses yet.</td></tr>`}</tbody>
+      </table></div>
+      <p class="note-sm">Flags are candidates for exclusion, not automatic removals. Decide your exclusion rule before collecting data and apply it consistently.</p>
+    `;
+  };
+  el.querySelector("#csv").onclick = () => dl(toCSV(loaded), "qc_trial_level.csv", "text/csv");
+  el.querySelector("#sum").onclick = () => dl(toSummaryCSV(loaded), "qc_participant_summary.csv", "text/csv");
+  el.querySelector("#json").onclick = () => dl(JSON.stringify(loaded, null, 2), "qc_raw.json", "application/json");
+}
+
+function dl(text, name, mime) {
+  const b = new Blob([text], { type: mime });
+  const u = URL.createObjectURL(b);
+  const a = document.createElement("a");
+  a.href = u; a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(u);
+}
+
+render();
+</script>
+</body>
+</html>
